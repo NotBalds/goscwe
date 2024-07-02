@@ -37,7 +37,7 @@ func main() {
 		strkey := base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&skey.PublicKey))
 		reg := Registration{id, strkey}
 		data, _ := json.Marshal(reg)
-		http.Post("http://0.0.0.0:1337/register", "application/json", bytes.NewReader(data))
+		http.Post("http://bald.su:1337/register", "application/json", bytes.NewReader(data))
 		os.MkdirAll(os.Getenv("HOME")+"/.local/share/goscwe", fs.ModePerm)
 		os.Chdir(os.Getenv("HOME") + "/.local/share/goscwe")
 		os.WriteFile("uuid", []byte(id), fs.ModePerm)
@@ -64,7 +64,7 @@ func main() {
 			signature := base64.StdEncoding.EncodeToString(btssig)
 
 			data, _ := json.Marshal(User{id, strconv.FormatInt(time.Now().Unix(), 10), signature})
-			res, _ := http.Post("http://0.0.0.0:1337/get", "application/json", bytes.NewReader(data))
+			res, _ := http.Post("http://bald.su:1337/get", "application/json", bytes.NewReader(data))
 			body, _ := io.ReadAll(res.Body)
 			var msgs []Message
 			_ = json.Unmarshal(body, &msgs)
@@ -111,7 +111,7 @@ func main() {
 			signature := base64.StdEncoding.EncodeToString(btssig)
 
 			data, _ := json.Marshal(Send{Receiver: receiver, Message: Message{Sender: id, Content: basecontent}, SendTime: strconv.FormatInt(time.Now().Unix(), 10), SendTimeSignature: signature})
-			_, _ = http.Post("http://0.0.0.0:1337/send", "application/json", bytes.NewReader(data))
+			_, _ = http.Post("http://bald.su:1337/send", "application/json", bytes.NewReader(data))
 		}
 		if n == 2 {
 			bts, _ := os.ReadFile("uuid")
