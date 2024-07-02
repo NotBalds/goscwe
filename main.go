@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -29,15 +30,21 @@ func exists(path string) bool {
 }
 
 func main() {
-	if !exists(os.Getenv("HOME") + "/.local/share/gocwe") {
+	if !exists(os.Getenv("HOME") + "/.local/share/goscwe") {
 		id := uuid.NewString()
 		key, _ := rsa.GenerateKey(rand.Reader, 1024)
-		os.MkdirAll(os.Getenv("HOME")+"/.local/share/gocwe", fs.ModePerm)
-		os.Chdir(os.Getenv("HOME") + "/.local/share/gocwe")
+		skey, _ := rsa.GenerateKey(rand.Reader, 1024)
+		strkey := base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&skey.PublicKey))
+		reg := Registration{id, strkey}
+		data, _ := json.Marshal(reg)
+		http.Post("http://0.0.0.0:1337/register", "application/json", bytes.NewReader(data))
+		os.MkdirAll(os.Getenv("HOME")+"/.local/share/goscwe", fs.ModePerm)
+		os.Chdir(os.Getenv("HOME") + "/.local/share/goscwe")
 		os.WriteFile("uuid", []byte(id), fs.ModePerm)
 		os.WriteFile("key", x509.MarshalPKCS1PrivateKey(key), fs.ModePerm)
+		os.WriteFile("skey", x509.MarshalPKCS1PrivateKey(skey), fs.ModePerm)
 	}
-	os.Chdir(os.Getenv("HOME") + "/.local/share/gocwe")
+	os.Chdir(os.Getenv("HOME") + "/.local/share/goscwe")
 	var keys = make(map[string]string)
 	for {
 		fmt.Println("If you want to receive messages, enter 0, if you want to send message, enter 1, to view your uuid and publickey, enter 2")
@@ -51,8 +58,11 @@ func main() {
 			id := string(bts)
 			bts, _ = os.ReadFile("key")
 			key, _ := x509.ParsePKCS1PrivateKey(bts)
-			data, _ := json.Marshal(User{id})
-			res, _ := http.Post("http://bald.su:1337/get", "application/json", bytes.NewReader(data))
+			bts, _ = os.ReadFile("skey")
+			skey, _ := x509.ParsePKCS1PrivateKey(bts)
+			signature, _ := rsa.SignPKCS1v15(rand.Reader, skey, crypto.Hash(0), []byte(id))
+			data, _ := json.Marshal(User{id, base64.StdEncoding.EncodeToString(signature)})
+			res, _ := http.Post("http://0.0.0.0:1337/get", "application/json", bytes.NewReader(data))
 			body, _ := io.ReadAll(res.Body)
 			var msgs []Message
 			_ = json.Unmarshal(body, &msgs)
@@ -72,7 +82,8 @@ func main() {
 		if n == 1 {
 			bts, _ := os.ReadFile("uuid")
 			id := string(bts)
-			bts, _ = os.ReadFile("key")
+			bts, _ = os.ReadFile("skey")
+			skey, _ := x509.ParsePKCS1PrivateKey(bts)
 			var content, pubkey, receiver string
 			fmt.Println("Enter receiver:")
 			fmt.Scan(&receiver)
@@ -94,8 +105,11 @@ func main() {
 
 			basecontent := base64.StdEncoding.EncodeToString(ccontent)
 
-			data, _ := json.Marshal(Send{Receiver: receiver, Message: Message{Sender: id, Content: basecontent, SendTime: strconv.FormatInt(time.Now().Unix(), 10)}})
-			_, _ = http.Post("http://bald.su:1337/send", "application/json", bytes.NewReader(data))
+			btssig, _ := rsa.SignPKCS1v15(rand.Reader, skey, crypto.Hash(0), []byte(strconv.FormatInt(time.Now().Unix(), 10)))
+			signature := base64.StdEncoding.EncodeToString(btssig)
+
+			data, _ := json.Marshal(Send{Receiver: receiver, Message: Message{Sender: id, Content: basecontent}, SendTime: strconv.FormatInt(time.Now().Unix(), 10), SendTimeSignature: signature})
+			_, _ = http.Post("http://0.0.0.0:1337/send", "application/json", bytes.NewReader(data))
 		}
 		if n == 2 {
 			bts, _ := os.ReadFile("uuid")
