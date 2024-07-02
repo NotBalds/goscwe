@@ -36,6 +36,7 @@ func main() {
 		os.WriteFile("key", x509.MarshalPKCS1PrivateKey(key), fs.ModePerm)
 	}
 	os.Chdir(os.Getenv("HOME") + "/.local/share/gocwe")
+	var keys = make(map[string]string)
 	for {
 		fmt.Println("If you want to receive messages, enter 0, if you want to send message, enter 1, to view your uuid and publickey, enter 2")
 		var n int
@@ -73,8 +74,13 @@ func main() {
 			var content, pubkey, receiver string
 			fmt.Println("Enter receiver:")
 			fmt.Scan(&receiver)
-			fmt.Println("Enter his publickey")
-			fmt.Scan(&pubkey)
+			if keys[receiver] == "" {
+				fmt.Println("Enter his publickey")
+				fmt.Scan(&pubkey)
+				keys[receiver] = pubkey
+			} else {
+				pubkey = keys[receiver]
+			}
 			fmt.Println("Enter content:")
 			io := bufio.NewReader(os.Stdin)
 			content, _ = io.ReadString('\n')
