@@ -14,6 +14,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -92,7 +94,7 @@ func main() {
 
 			basecontent := base64.StdEncoding.EncodeToString(ccontent)
 
-			data, _ := json.Marshal(Send{Receiver: receiver, Message: Message{Sender: id, Content: basecontent}})
+			data, _ := json.Marshal(Send{Receiver: receiver, Message: Message{Sender: id, Content: basecontent, SendTime: strconv.FormatInt(time.Now().Unix(), 10)}})
 			_, _ = http.Post("http://bald.su:1337/send", "application/json", bytes.NewReader(data))
 		}
 		if n == 2 {
