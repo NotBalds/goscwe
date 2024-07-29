@@ -32,8 +32,8 @@ func exists(path string) bool {
 func main() {
 	if !exists(os.Getenv("HOME") + "/.local/share/goscwe") {
 		id := uuid.NewString()
-		key, _ := rsa.GenerateKey(rand.Reader, 1024)
-		skey, _ := rsa.GenerateKey(rand.Reader, 1024)
+		key, _ := rsa.GenerateKey(rand.Reader, 2048)
+		skey, _ := rsa.GenerateKey(rand.Reader, 2048)
 		strkey := base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&skey.PublicKey))
 		reg := Registration{id, strkey}
 		data, _ := json.Marshal(reg)
